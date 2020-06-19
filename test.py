@@ -8,85 +8,8 @@ from encoder import DataEncoder
 from PIL import Image, ImageDraw
 import os
 
-print('Loading model..')
-net = RetinaNet(num_classes=10)
-net=torch.load('./checkpoint/adam_e4_iou45_pre_fpn50_full_b2_vhr_50_nd_9ma_s20_105_5block_final1_flipflop_dy.pkl')
-#net.load_state_dict(state['net'])
-net.eval()
-
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225))
-])
-
-root='/home/peng/Desktop/NWPU VHR-10.v2 dataset/JPEGImages/'
-with open('/home/peng/Desktop/NWPU VHR-10.v2 dataset/train-test/test.txt') as f:
-    test_list = f.readlines()
-
-print('Loading image..')
-img = Image.open(os.path.join(root,test_list[14].split(' \n')[0]+'.jpg'))
-img = Image.open('/home/peng/Desktop/NWPU VHR-10.v2 dataset/JPEGImages/000872.jpg')
-w = h = 600
-img = img.resize((w,h))
-
-print('Predicting..')
-x = transform(img)
-x = x.unsqueeze(0)
-x = Variable(x, volatile=True)
-#print('Decoding..')
-encoder = DataEncoder()
-
-import time
-start = time.time()
-loc_preds, cls_preds = net(x)
-
-
-
-#loc_preds, cls_preds, input_size
-#CLS=0.3,NMS=0.15
-boxes, labels, score = encoder.decode(loc_preds.data.squeeze(), cls_preds.data.squeeze(),(w,h),0.001,0.15)
-end = time.time()
-print(end - start)
-
-
-#loc_preds, cls_preds, input_size
-#CLS=0.3,NMS=0.15
-boxes, labels, score = encoder.decode(loc_preds.data.squeeze(), cls_preds.data.squeeze(),(w,h),0.001,0.15)
-
-all_blobs=[]
-if score.is_cuda:
-    boxes=boxes.cpu().numpy()
-    score=score.cpu().numpy()
-    labels=labels.cpu().numpy()
-else:
-    score=[]
-
-draw = ImageDraw.Draw(img)
-for idx in range(boxes.shape[0]):
-    ix,iy,x,y=boxes[idx]
-    draw.rectangle(list(boxes[idx]), outline='red')
-    #draw.text((ix-12, iy-12),"%.2f"%score[idx],(255,255,255))
-    #draw.text((x, y),"%d"%labels[idx],(255,255,255))
-img.show()
 # =============================================================================
-# ####make prediction for all images
-# =============================================================================
-boxes=boxes.numpy()
-score=score.numpy()
-scale=600.0/600
-all_blobs=[]
-for idx in range(boxes.shape[0]):
-    x1,y1,x2,y2=boxes[idx]
-    x=((x1+x2)/2)/scale
-    y=((y1+y2)/2)/scale
-    px=int(x)
-    py=int(y)
-    all_blobs.append([px,py,score[idx]])
-    
-    
-    
-# =============================================================================
-# ####visualization 
+# visualization and save into folder
 # =============================================================================    
 import glob 
 import os
@@ -105,12 +28,8 @@ for nms in nms_list:
     
     image_list=test_list
     root1='/home/peng/Desktop/NWPU VHR-10.v2 dataset'
-    #os.mkdir(os.path.join(root1,'testvisual'))
     
-    
-    ####first we need to generate result on patches
-    ####second merge patches into one image
-    ####third generate format of submission
+    ##load the model
     net = RetinaNet(num_classes=10)
     net=torch.load('./checkpoint/adam_e4_iou45_pre_fpn50_full_b2_vhr_50_nd_9ma_s20_105_5block_final1_flipflop_dy.pkl')
     net.eval()
@@ -121,7 +40,7 @@ for nms in nms_list:
         transforms.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225))
     ])
         
-        
+    ##walk through all images and then make prediction   
     count=0  
     for i in range(len(image_list)):
         item=os.path.join(root,image_list[i].split(' \n')[0]+'.jpg')
@@ -172,10 +91,11 @@ for nms in nms_list:
                 draw.line(line, fill=(0,0,256/labels[idx]), width=5)
                 if score[idx] >=0.4:
                     s_count+=1
+            ## save images into the output folder
             if s_count>0:   
                 img.save(os.path.join(root1,'testvisual',item.split('/')[-1]))
 # =============================================================================
-# ####mask prediction 
+# mask prediction 
 # =============================================================================
 
 
@@ -240,9 +160,13 @@ import glob
 from skimage import io
 import skimage.feature
 import pandas as pd
+import xml
+from shutil import copyfile
+
+###load the model
 print('Loading model..')
 net = RetinaNet(num_classes=10)
-net=torch.load('./checkpoint/adam_e4_s30_35_dy.pkl')
+net=torch.load('./checkpoint/adam_e4_s30_35_dy.pkl') ##change weight
 #net.load_state_dict(state['net'])
 net.eval()
 
@@ -252,6 +176,7 @@ transform = transforms.Compose([
 ])
 
 
+###load the path of images
 root='/home/peng/Desktop/NWPU VHR-10.v2 dataset/JPEGImages/'
 with open('/home/peng/Desktop/NWPU VHR-10.v2 dataset/train-test/test.txt') as f:
     test_list = f.readlines()
@@ -265,8 +190,7 @@ label_root='/home/peng/Desktop/NWPU VHR-10.v2 dataset/Annotations/'
 class_name={'airplane':1,'baseball':2,'basketball':3,'bridge':4,'tenniscourt':5,
             'groundtrackfield':6,'harbor':7,'storagetank':8,'ship':9,'vehicle':10}
 
-import xml
-from shutil import copyfile
+
 
 
 
@@ -310,20 +234,12 @@ for idx in range(len(image_list)):
     x = Variable(x, volatile=True)
     loc_preds, cls_preds = net(x)
     
-    #loc_preds, cls_preds= loc_preds.cpu(), cls_preds.cpu()
     #print('Decoding..')
     encoder = DataEncoder()
     
     
-    #loc_preds, cls_preds, input_size
     #CLS=0.3,NMS=0.15
     boxes, labels, score = encoder.decode(loc_preds.data.squeeze(), cls_preds.data.squeeze(),(w,h),0.001,0.15)
-    #draw = ImageDraw.Draw(img)
-    '''
-    for box in boxes:
-        draw.rectangle(list(box), outline='red')
-    img.show()
-    '''
 
     all_blobs=[]
 
@@ -349,7 +265,7 @@ for idx in range(len(image_list)):
 
         
         
-        
+        ### output prediction result and make them into right format for evaluation
         for ind_i in range(len(box)):
             
             xmin=int(box[ind_i][0])
