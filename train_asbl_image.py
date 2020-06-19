@@ -84,17 +84,10 @@ else:
     for param in net.parameters():
         param.requires_grad = True
         
-        
+###optimizer
 from itertools import ifilter
 op_parameters = ifilter(lambda p: p.requires_grad, net.parameters())
-  
-'''    
-count=0
-for param in net.parameters():
-    count+=1
-    print(param.requires_grad)
-    print(count) 
-'''
+ 
 criterion = FocalLoss(num_classes=10)
 optimizer = optim.Adam(op_parameters, lr=lr, betas=(0.9, 0.99))
 #later add scheduler into optimizer
@@ -102,6 +95,8 @@ optimizer = optim.Adam(op_parameters, lr=lr, betas=(0.9, 0.99))
 from torch.optim import lr_scheduler
 scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1) ###need to update step size
 
+
+###predefined functions
 def py_nms(dets, thresh):
     """Pure Python NMS baseline."""
     x1 = dets[:, 0]
@@ -195,11 +190,9 @@ def test(epoch):
         loc_preds, cls_preds = net(inputs)
         loss,loc_loss,cls_loss,iw = criterion(inputs, flip, loc_preds, loc_targets, cls_preds, cls_targets)
         test_loss += loss.data[0]
-        #print('test_loss: %.3f | avg_loss: %.3f' % (loss.data[0], test_loss/(batch_idx-count+1)))
         t.set_description('loc_loss: %.3f|cls_loss: %.3f|iw: %.2f | test_loss: %.3f | avg_loss: %.3f, %d' % (loc_loss, cls_loss, iw, loss.data[0], test_loss/(batch_idx+1),flip[0]))
-	#print('test_loss: %.3f | avg_loss: %.3f' % (loss.data[0], test_loss/(batch_idx-count+1)))
         
-        # Save checkpoint
+    # Save checkpoint
     global best_loss
     test_loss /= len(testloader)
     if test_loss < best_loss:
@@ -214,6 +207,8 @@ def test(epoch):
     return test_loss
 
 
+
+###select the best performance on validation dataset for mAP result.
 def mAP(): 
     net.eval()
     
@@ -341,29 +336,15 @@ def mAP():
         
     
     
-import csv
+### main function, for train/validation
 train_loss_list=[]
 test_loss_list=[]
 mAP_list=[]
 for epoch in range(start_epoch, start_epoch+100):
-    #loss=train(epoch)
-    #train_loss_list.append(loss)
+    loss=train(epoch)
+    train_loss_list.append(loss)
     loss=test(epoch)
     test_loss_list.append(loss)
     if epoch % 5 ==0:
         map_value=mAP()
         mAP_list.append(map_value)
-    '''
-    with open('/home/peng/Dropbox/retina/vhr/train_loss_e4_full_adam_nd_9ma_iou45_b2_fpn50_s20_105_5block1_flipflop.csv', 'wb') as myfile:
-    	wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-    	wr.writerow(train_loss_list)
-
-    with open('/home/peng/Dropbox/retina/vhr/test_loss_e4_full_adam_nd_9ma_iou45_b2_fpn50_s20_105_5block1_flipflop.csv', 'wb') as myfile:
-    	wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-    	wr.writerow(test_loss_list)
-    if epoch % 5 ==0:
-       torch.save(net, './checkpoint/adam_e4_iou45_pre_fpn50_full_b2_dota_50_nd_9ma_s20_105_5block_epoch1_%d_flipflop.pkl' % epoch )
-    '''
-#torch.save(net, './checkpoint/adam_e4_iou45_pre_fpn50_full_b2_dota_50_nd_9ma_s20_105_5block_final1_flipflop.pkl'  )   
-    
-
