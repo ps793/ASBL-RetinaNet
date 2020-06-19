@@ -113,7 +113,6 @@ for nms in nms_list:
     ####third generate format of submission
     net = RetinaNet(num_classes=10)
     net=torch.load('./checkpoint/adam_e4_iou45_pre_fpn50_full_b2_vhr_50_nd_9ma_s20_105_5block_final1_flipflop_dy.pkl')
-    #net.load_state_dict(state['net'])
     net.eval()
 
     
@@ -171,8 +170,6 @@ for nms in nms_list:
                 draw.line(line, fill=(0,0,256/labels[idx]), width=5)
                 line = (cor[2],cor[1],cor[2],cor[3])
                 draw.line(line, fill=(0,0,256/labels[idx]), width=5)
-            #img.show()
-                #draw.rectangle(, outline='red')
                 if score[idx] >=0.4:
                     s_count+=1
             if s_count>0:   
@@ -192,93 +189,6 @@ import glob
 from skimage import io
 import skimage.feature
 import pandas as pd
-def IoU(box1, box2):
-
-    [xmin1, ymin1, xmax1, ymax1] = box1
-    [xmin2, ymin2, xmax2, ymax2] = box2
-    area1 = (xmax1 - xmin1) * (ymax1 - ymin1)
-    area2 = (xmax2 - xmin2) * (ymax2 - ymin2)
-    xmin_inter = max(xmin1, xmin2)
-    xmax_inter = min(xmax1, xmax2)
-    ymin_inter = max(ymin1, ymin2)
-    ymax_inter = min(ymax1, ymax2)
-    if xmin_inter > xmax_inter or ymin_inter > ymax_inter:
-        return 0
-    area_inter = (xmax_inter - xmin_inter) * (ymax_inter - ymin_inter)
-    
-    return float(area_inter) / (area1 + area2 - area_inter)
-
-
-
-
-#blobs, pred_blobs=all_gt,all_blobs
-
-def evaluation_blob(blobs, pred_blobs, iou_ratio):      
-    if len(blobs)==0 and len(pred_blobs)!=0:
-        red=0
-        fp=len(pred_blobs)
-        tp=0
-        fn=0
-    if len(blobs)!=0 and len(pred_blobs)==0:
-        red=0
-        fn=len(blobs)
-        tp=0
-        fp=0
-    if len(blobs)==0 and len(pred_blobs)==0:
-        red=0
-        fp=0
-        tp=0
-        fn=0  
-        
-    if len(blobs)!=0 and len(pred_blobs)!=0: 
-        fp=0
-        tp=0
-        fn=0
-        red=0
-        for truth in blobs:
-            x1=int(truth[0])
-            y1=int(truth[1])
-            x2=int(truth[2])
-            y2=int(truth[3])
-            box1=[x1,y1,x2,y2]
-            all_dis=[]
-            all_score=[]
-            pred_blobs=np.array(pred_blobs)           
-            #logic1=(pred_blobs[:,0]>=nneg(ty-100)) & (pred_blobs[:,0]<=nneg(ty+100)) 
-            #logic2=(pred_blobs[:,1]>=nneg(tx-100)) & (pred_blobs[:,1]<=nneg(tx+100)) 
-            #small_pred=pred_blobs[logic1 & logic2]
-            small_pred=pred_blobs
-            for pred in small_pred:
-                px1= int(pred[0])
-                py1= int(pred[1])
-                px2= int(pred[2])
-                py2= int(pred[3])
-                score=pred[4]
-                
-                box2=[px1,py1,px2,py2]
-                #dis=np.sqrt(np.power((px-tx),2)+np.power((py-ty),2))
-                #need to change to IoU
-                iou=IoU(box1,box2)
-                all_score.append(score)
-                all_dis.append(iou)
-            #print(all_dis)
-            if sum(np.array(all_dis)>iou_ratio) !=0:
-                #for two ture with one pred problem
-                min_dis=max(all_dis) 
-                min_ind=all_dis.index(min_dis)  
-                
-                small_pred[min_ind]=[-100,-100,-100,-100,-100]
-                tp+=1
-                #red+=sum(np.array(all_dis)>iou_ratio)-1
-            
-            if sum(np.array(all_dis)>iou_ratio) ==0:
-                fn+=1
-            #pred_blobs[logic1 & logic2]=small_pred
-            pred_blobs=small_pred
-        fp=len(pred_blobs)-tp
-        #print(tp,fn,fp)
-    
-    return fp,tp,fn,red
 
 def py_nms(dets, thresh):
     """Pure Python NMS baseline."""
@@ -458,100 +368,3 @@ for idx in range(len(image_list)):
 
 
 
-#############################
-    print('calculating f1 score for %d test' %len(image_list))
-    thres_list=np.arange(0, 1.0, 0.05)
-    
-    
-    # on easy one, 0.3 -> 0.8729 adam
-    recall_list=[]
-    precision_list=[]
-    for thres in thres_list:
-        print thres
-        all_tp=[]
-        all_fn=[]
-        all_fp=[]
-        iou_ratio=0.4
-        all_pred=[]
-        #thres=0.95
-        all_recall=[]
-        all_precision=[]
-        all_true=[]
-        for idx in range(len(image_list)):   
-            #get gt cood
-            all_gt=test_gt[idx]
-        
-            
-            pred=test_pred[idx]
-            all_blobs=[]           
-            for i in range(len(pred)):
-                for m in range(len(pred[i])):
-                   x1,y1,x2,y2,score=pred[i][m]
-                   if score>thres:
-                       box=[x1,y1,x2,y2,score]
-                       all_blobs.append(box)
-                               
-        
-                        
-            pred_len=len(all_blobs)  
-            #print(pred_len)
-            fp,tp,fn,red=evaluation_blob(all_gt,all_blobs,iou_ratio=iou_ratio)
-            assert(tp+fn==len(all_gt))
-            assert(tp+fp+red==pred_len)
-            all_tp.append(tp)
-            all_fn.append(fn)
-            all_fp.append(fp)   
-            all_pred.append(pred_len)
-            if tp+fn==0:
-                recall=0
-            else:
-                recall=float(tp)/(tp+fn)
-                
-            if tp+fp==0:
-                precision=0
-            else:
-                precision=tp/(tp+fp)
-            all_recall.append(recall)
-            all_precision.append(precision)
-            all_true.append(len(all_gt))
-            
-        #print(all_tp)
-        #print(all_fn)
-        #print(all_fp)
-        
-        recall_result=float(np.sum(all_tp))/(np.sum(all_tp)+np.sum(all_fn))
-        precision_result=float(np.sum(all_tp))/(np.sum(all_tp)+np.sum(all_fp))
-        recall_list.append(recall_result)
-        precision_list.append(precision_result)
-        f1=(2*precision_result*recall_result)/(recall_result+precision_result)
-        
-        
-        print('full test f1: %.4f' % f1)    
-
-
-
-    data=pd.DataFrame(list(zip(thres_list,precision_list, recall_list)),
-                  columns=['thres','precision','recall'])
-    data=data.dropna()
-    new=data.sort_values('precision')
-    pr_list[c]=new
-    
-    
-from sklearn import metrics
-new=pr_list['baseball']
-pr=metrics.auc(new['recall'],new['precision'])
-plt.plot(new['recall'],new['precision'])
-
-from sklearn.metrics import average_precision_score
-
-
-class_name={'airplane':1,'baseball':2,'basketball':3,'bridge':4,'tenniscourt':5,
-            'groundtrackfield':6,'harbor':7,'storagetank':8,'ship':9,'vehicle':10}
-
-
-img = img.resize((w,h))
-
-draw = ImageDraw.Draw(img)
-for box in boxes:
-    draw.rectangle(list(box), outline='red')
-img.show()
