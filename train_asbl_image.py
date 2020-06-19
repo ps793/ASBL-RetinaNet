@@ -12,7 +12,7 @@ import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms
 
-from loss import FocalLoss
+from loss_asbl_image import FocalLoss
 from retinanet import RetinaNet
 from datagen_flipflop import ListDataset
 
