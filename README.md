@@ -16,5 +16,4 @@ ResNet50 Pretrained weight: https://drive.google.com/open?id=1_2QMI7mbZuUvhIenW_
 test inference
 
 # Enviroment
-1. if pytorch==0.3.1, run test03.py 
-2. if pytorch==1.0, run test10.py
+ pytorch = 0.3.1
