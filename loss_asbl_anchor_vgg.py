@@ -9,6 +9,7 @@ from torch.autograd import Variable
 from torchvision import  models
 import numpy as np
 
+###load pretrained two more block vgg16 model
 model_vgg=models.vgg16_bn(pretrained=True).cuda()
 
 checkpoint = torch.load('./model_vgg_best.pth.tar')
@@ -122,50 +123,7 @@ class FocalLoss(nn.Module):
         num_pos = pos.data.long().sum()
 	# ==============================================================
         # weight
-        # ==============================================================
-       	''' 
-	#####flip info
-	n=flip.size()[0]
-        iw=[]
-        i=0
-        while i<n:
-            if flip[i]==1:
-                y = x[i].data.cpu().numpy()
-                y = np.flip(y,2)#left to right
-                y = torch.from_numpy(y.copy())
-                y = y.unsqueeze(0)
-                y = Variable(y)
-                z = self.features(y.cuda())
-                r = z.size(3)       
-                z = F.avg_pool2d(z, r)
-                z = z.view(z.size(0), -1)
-                z = F.relu(z)
-                iw.append(torch.mean(z,1) )
-            else:
-                #train min 0.311, max 0.465  
-                img = x[i].unsqueeze(0)
-                z = self.features(img.cuda())
-                r = z.size(3)       
-                z = F.avg_pool2d(z, r)
-                z = z.view(z.size(0), -1)
-                z = F.relu(z)
-                iw.append(torch.mean(z,1) )
-                
-            i+=1  
-        iw=torch.cat(iw, dim=0) 
-	
-	#########no flip info
-	z = self.features(x.cuda())
-        r = z.size(3)      
-        z = F.avg_pool2d(z, r)
-        z = z.view(z.size(0), -1)
-        z = F.relu(z)
-	iw = torch.mean(z,1)
-	
-	#iw=(iw-0.311)*(1.0-0.5)/(0.465-0.311)+0.5#median 0.4497
-	#iw=(iw-0.017)*(1.0-0.5)/(0.042-0.017)+0.5
-	iw=(iw-0.129)*(1.0-0.5)/(0.180-0.129)+0.5#block 5
-        '''
+        # =============================================================
 	        #
         z3=self.c3(x.cuda())
         z4=self.c4(z3.cuda())
@@ -194,17 +152,10 @@ class FocalLoss(nn.Module):
                 fea_dot[j]=(fea_dot[j]-min_fea[j])/(max_fea[j]-min_fea[j])
             iw_map=fea_dot.contiguous().view(fea_dot.size(0),-1).unsqueeze(2).repeat(1,1,9).view(fea_dot.size(0),-1)
             #N,H*W->N,H*W,9 -> N,H*W*9
-            #r=fea_dot.size(2)
-            #z=F.avg_pool2d(fea_dot,r)
-            #z=z.view(z.size(0),-1)
-            #z=F.relu(z)
             iw_list.append(iw_map)
         
         iw=torch.cat(iw_list,dim=1) ####no normalization
         iw=iw.detach()###get off the graphic
-	#print(iw)
-        ##0.0011994859, 0.0047983024 c4
-        ##0.0075986516, 0.025505692 c5
 	################################################################
         # loc_loss = SmoothL1Loss(pos_loc_preds, pos_loc_targets)
         ################################################################
