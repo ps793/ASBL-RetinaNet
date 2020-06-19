@@ -1,3 +1,7 @@
+##############################################
+# this main script is for calculation of mAP only, instead of whole system running. if you want to train the model, please refer train_asbl_image.py and train_asbl_anchor.py
+##############################################
+
 import glob
 import json
 import os
