@@ -1,6 +1,6 @@
 # ASBL-RetinaNet
 
-This repository provide the code of Adaptive Saliency Biased Loss (ASBL). We provide model weights and code for each dataset shown in the paper for replication of our work. In addition, basic code structure provided in this repo. This repo is currently in maintainance. If you have any question when you run the code, please feel free to leave message in the issues channel, we will keep it posted.
+This repository provide the code of Adaptive Saliency Biased Loss (ASBL). We provide model weights for each dataset shown in the paper for replication of our work. In addition, basic code structure provided in this repo. This repo is currently in maintainance. If you have any question when you run the code, please feel free to leave message in the issues channel, we will keep it posted.
 
 
 
